@@ -20,9 +20,9 @@ Another issue we need to address early in development is the amount of informati
 ## Implementation
 As noted previously, we will be using the Slack API in conjunction with Python in order to implement the Slack bot, and we will be using Piskel for artwork. Some available features for the bot will include:
 
-Alerting the channel if no messages have occured in x hours
-Changing state to “inquisitive” if x questions have been asked in the last x hours
-“Evolving” based on the content of the channel - links, polls, documents, etc.
+* Alerting the channel if no messages have occured in x hours
+* Changing state to “inquisitive” if x questions have been asked in the last x hours
+* “Evolving” based on the content of the channel - links, polls, documents, etc.
 
 After the brainstorming phase, which we plan on having complete within the next week, the next step will be a large amount of articulation work involving learning the Slack API in order to implement some proposed features. Once we have a solid set of features implemented, we want to mimic an agile style of development in order to continually iterate upon our bot with the goal of refining our set of use cases.
 
