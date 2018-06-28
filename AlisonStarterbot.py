@@ -1,21 +1,37 @@
 import os
 import time
 import re
-from slackclient import SlackClient 
-from datetime import datetime, timedelta
+from slackclient import SlackClient
 
 # instantiate Slack client
 slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
-SLACK_CHANNEL_NAME = "slackbot_test"
+
+#get name for private channel
+channel_name = os.environ.get('SLACK_CHANNEL_NAME')
+
 # starterbot's user ID in Slack: value is assigned after the bot starts up
 starterbot_id = None
-#channel_name = os.environ["SLACK_CHANNEL_NAME"]
+
+#TEMPORARY GLOBAL
+channel_id = None
 
 # constants
 RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
 EXAMPLE_COMMAND = "do"
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
 
+class User:
+    #initialze a user
+    def __init__(self, id):
+        self.files_shared = 0
+        self.links_shared = 0
+        self.reactions_made = 0
+        self.questions_asked = 0
+        self.questions_answered = 0
+        self.messages_sent = 0
+        #use in combination with channel id to identify each user
+        self.id = id
+        self.name = ""
 
 def parse_bot_commands(slack_events):
     """
@@ -34,7 +50,7 @@ def parse_bot_commands(slack_events):
 
 
 def parse_direct_mention(message_text):
-    
+
     """
         Finds a direct mention (a mention that is at the beginning) in message text
         and returns the user ID which was mentioned. If there is no direct mention, returns None
@@ -54,24 +70,6 @@ def handle_command(command, channel):
     # Finds and executes the given command, filling in response
     response = None
     # This is where you start to implement more commands!
-    info = slack_client.api_call("channels.info", channel=channel)
-    print(channel)
-    print(info)
-    channel = info['channel']
-    latest = channel['latest']
-    ts = latest['ts']  
-            
-    t2 = datetime.now()
-    t1 = datetime.fromtimestamp(
-                float(ts)
-            ).strftime('%Y-%m-%d %H:%M:%S')
-            
-    t1 = datetime.strptime(t1, '%Y-%m-%d %H:%M:%S')
-            
-    print(t1)
-    print(t2)
-    print(t2-t1)
-    
     if command.startswith(EXAMPLE_COMMAND):
         response = "Sure...write some more code then I can do that!"
 
@@ -82,69 +80,44 @@ def handle_command(command, channel):
         text=response or default_response
     )
 
+def get_channel_id():
+    """
+        Get the id for the private channel
+    """
+    channels = slack_client.api_call("channels.list")
+    for channel in channels['channels']:
+        if channel['name'] == channel_name:
+            channel_id = channel['id']
+    if channel_id == None:
+        raise Exception("cannot find private channel " + channel_name)
 
-def message_alerts(channel):
-    
-        info = slack_client.api_call("channels.info", channel=channel)
-        
-        #print(info)           
-        chan = info['channel']
-        latest = chan['latest']
-        ts = latest['ts']  
-            
-        t2 = datetime.now()
-        t1 = datetime.fromtimestamp(
-                float(ts)
-            ).strftime('%Y-%m-%d %H:%M:%S')
-            
-        t1 = datetime.strptime(t1, '%Y-%m-%d %H:%M:%S')
-            
-        #print(t1)
-        #print(t2)
-        time_difference = t2-t1
-        print(time_difference)
-        response="ALERT! NO MESSAGES HAVE BEEN SENT IN 1 MINUTE! TALK MORE!"
-        x = 100
-        if(time_difference > timedelta(minutes=1)):
-            
-            #print("true")
-            slack_client.api_call(
-                "chat.postMessage",
-                channel=channel,    
-                text=response or default_response
-            )
-
-           
-        
+def get_users():
+    """
+        Creates a user object for each user in the channel
+        to track their activity
+        Returns a list of the users
+    """
+    users = []
+    channel = slack_client.api_call(
+        "channels.info",
+        channel=channel_id
+    )
+    for member in channel["channel"]["members"]
+        users.append(User(member))
+    #Need to also find display name of each user and store in object
+    return users
 
 if __name__ == "__main__":
     if slack_client.rtm_connect(with_team_state=False):
         print("Starter Bot connected and running!")
-
-
-        channels = slack_client.api_call("channels.list")
-        channel_id = None
-        
-
-        #find the channel we want
-        for channel in channels['channels']:
-            if channel['name'] == SLACK_CHANNEL_NAME:
-                channel_id = channel['id']
-        if channel_id == None:
-            raise Exception("cannot find channel " + channel_name)
-        print("Got a channel! " + channel_id)
-
-
-
         # Read bot's user ID by calling Web API method `auth.test`
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
+        get_channel_id()
+        users = get_users()
         while True:
-            
             command, channel = parse_bot_commands(slack_client.rtm_read())
-            message_alerts(channel_id)
             if command:
                 handle_command(command, channel)
             time.sleep(RTM_READ_DELAY)
     else:
         print("Connection failed. Exception traceback printed above.")
-
