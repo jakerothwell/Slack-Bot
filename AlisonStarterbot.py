@@ -31,6 +31,7 @@ class User:
         self.messages_sent = 0
         #use in combination with channel id to identify each user
         self.id = id
+        #user name found immediately after instance created, see get_users()
         self.name = ""
 
 def parse_bot_commands(slack_events):
@@ -102,9 +103,13 @@ def get_users():
         "channels.info",
         channel=channel_id
     )
-    for member in channel["channel"]["members"]
+    for member in channel["channel"]["members"]:
         users.append(User(member))
-    #Need to also find display name of each user and store in object
+    for user in users:
+        user.name = slack_client.api_call(
+            "users.info",
+            user=user.id
+        )["user"]["name"]
     return users
 
 if __name__ == "__main__":
